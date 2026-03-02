@@ -1,0 +1,19 @@
+---
+title: "Parallel Computing Prac"
+format: html
+editor: visual
+---
+
+## Questions
+
+### Question 1
+
+```{r}
+
+```
+
+### Question 2
+
+```{r}
+
+```
