@@ -6,14 +6,184 @@ editor: visual
 
 ## Questions
 
+```{r}
+library(foreach)
+library(doParallel)
+```
+
 ### Question 1
 
 ```{r}
+calc <- function(n) {
+  vals <- rexp(n, 1)
+  m <- mean(vals)
+  v <- var(vals)
+  c(m, v)
+}
 
+c1 <- makeCluster(3)
+registerDoParallel(c1)
+
+m_v <- foreach(i = 1:100, .combine = rbind) %dopar% {
+  calc(n = 1000)
+}
+
+stopCluster(c1)
 ```
 
 ### Question 2
 
 ```{r}
+library(MASS)
+gal <- galaxies
 
+B <- 1000
+n <- length(gal)
+
+# generate bootstrap medians
+m <- function(n, gal) {
+  sam <- sample(gal, n, replace = T)
+  med_g <- median(sam)
+}
+
+c2 <- makeCluster(3)
+registerDoParallel(c2)
+
+system.time({
+b_m <- foreach(i = 1:B, .combine = rbind) %dopar% {
+  m(n, gal)
+}
+})
+
+stopCluster(c2)
+
+tboot <- numeric(B)
+
+system.time({
+  for (i in 1:B) {
+  tboot[i] <- median(sample(gal, length(gal), replace = TRUE))
+}
+})
+```
+
+### Question 3
+
+```{r}
+library(foreach)
+library(doParallel)
+
+set.seed(1)
+
+R <- 1000
+B <- 1000
+
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+hits <- foreach(r = 1:R, .combine = "+") %dopar% {
+  x <- rexp(50, rate = 1)
+
+  boot_means <- replicate(B, mean(sample(x, 50, replace = TRUE)))
+  CI <- quantile(boot_means, c(0.025, 0.975), names = FALSE)
+
+  as.integer(CI[1] <= 1 && 1 <= CI[2])
+}
+
+stopCluster(cl)
+
+coverage <- hits / R
+coverage
+```
+
+### Question 4
+
+```{r}
+library(foreach)
+library(iterators)
+
+set.seed(1234)
+
+it <- irnorm(5)   # infinite iterator of length-5 vectors
+
+max_vals <- foreach(i = icount(3), .combine = c) %do% {
+  v <- nextElem(it)
+  max(v)
+}
+
+print(max_vals)
+```
+
+### Question 5
+
+```{r}
+# Packages
+library(iterators)
+library(foreach)
+library(doParallel)
+library(parallel)
+
+set.seed(1234)
+
+# --- one "run" of the task, done 3 times (3 vectors of length 5) ---
+
+run_replicate <- function() {
+  # serial base R
+  replicate(3, max(rnorm(5)))
+}
+
+run_foreach <- function() {
+  # uses irnorm(5) (infinite iterator) + icount(3) to stop after 3 vectors
+  it <- irnorm(5)
+  foreach(i = icount(3), .combine = c) %do% {
+    max(nextElem(it))
+  }
+}
+
+run_parLapply <- function(cl) {
+  # parallel: each worker computes one max(rnorm(5))
+  unlist(parLapply(cl, 1:3, function(i) max(rnorm(5))))
+}
+
+run_foreach_par <- function() {
+  # parallel foreach: each worker computes one max(rnorm(5))
+  foreach(i = 1:3, .combine = c) %dopar% max(rnorm(5))
+}
+
+# --- timing: repeat each method many times ---
+R <- 5000  # increase if you want more stable timings
+
+# 1) replicate (serial)
+t_rep <- system.time({
+  for (r in 1:R) run_replicate()
+})
+
+# 2) foreach (serial %do%) -- still useful as a baseline for foreach overhead
+t_for_do <- system.time({
+  for (r in 1:R) run_foreach()
+})
+
+# Set up cluster ONCE (important)
+cl <- makeCluster(3)
+registerDoParallel(cl)
+
+# 3) parLapply (parallel)
+t_parL <- system.time({
+  for (r in 1:R) run_parLapply(cl)
+})
+
+# 4) foreach (parallel %dopar%)
+t_for_par <- system.time({
+  for (r in 1:R) run_foreach_par()
+})
+
+stopCluster(cl)
+
+# Compare
+times <- rbind(
+  replicate = t_rep[1:3],
+  foreach_do = t_for_do[1:3],
+  parLapply = t_parL[1:3],
+  foreach_dopar = t_for_par[1:3]
+)
+times
 ```
