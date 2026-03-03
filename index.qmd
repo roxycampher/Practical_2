@@ -1,20 +1,22 @@
 ---
-title: "Parallel Computing Prac"
+title: "Parallel Computing Practical"
 author: "Roxy Campher"
 format: html
 editor: visual
 ---
 
-## Questions
+# Questions
 
 ```{r}
+#| warning: false
 library(foreach)
 library(doParallel)
 ```
 
-### Question 1
+## Question 1
 
 ```{r}
+#| warning: false
 calc <- function(n) {
   vals <- rexp(n, 1)
   m <- mean(vals)
@@ -30,11 +32,14 @@ m_v <- foreach(i = 1:100, .combine = rbind) %dopar% {
 }
 
 stopCluster(c1)
+colnames(m_v) <- c("Mean", "Variance")
+head(m_v)
 ```
 
-### Question 2
+## Question 2
 
 ```{r}
+#| warning: false
 library(MASS)
 gal <- galaxies
 
@@ -43,8 +48,8 @@ n <- length(gal)
 
 # generate bootstrap medians
 m <- function(n, gal) {
-  sam <- sample(gal, n, replace = T)
-  med_g <- median(sam)
+  sam <- sample(gal, n, replace = TRUE)
+  median(sam)
 }
 
 c2 <- makeCluster(3)
@@ -67,12 +72,12 @@ system.time({
 })
 ```
 
-### Question 3
+In this instance serial processing is much faster as Bootstrapping is relatively small. So paralellization is not always more beneficial due to the complex overhead involved in splitting and executing tasks between threads.
+
+## Question 3
 
 ```{r}
-library(foreach)
-library(doParallel)
-
+#| warning: false
 set.seed(1)
 
 R <- 1000
@@ -96,10 +101,10 @@ coverage <- hits / R
 coverage
 ```
 
-### Question 4
+## Question 4
 
 ```{r}
-library(foreach)
+#| warning: false
 library(iterators)
 
 set.seed(1234)
@@ -114,12 +119,10 @@ max_vals <- foreach(i = icount(3), .combine = c) %do% {
 print(max_vals)
 ```
 
-### Question 5
+## Question 5
 
 ```{r}
-library(iterators)
-library(foreach)
-library(doParallel)
+#| warning: false
 library(parallel)
 
 set.seed(1234)
@@ -179,3 +182,13 @@ times <- rbind(
 )
 times
 ```
+
+Here we see that replicate ran the fastest since it has very low overhead and no inter-process communication.
+
+foreach_do is sequential but slower than replicate as it has extra overhead which makes the run time slower.
+
+parLapply is faster than foreach_do but still slower than sequential computation due to overhead associated with creating clusters and inter-process communication.
+
+foreach_dopar is the slowest since it has parallel costs and framework overhead.
+
+This demonstrates that parallel computing is only beneficial when the computational workload per task is sufficiently large to offset parallel overhead costs.
