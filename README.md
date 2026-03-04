@@ -1,2 +1,2 @@
 # Practical_2
-Parallel computing practical.
+The HTML document is contained within the docs directory.
